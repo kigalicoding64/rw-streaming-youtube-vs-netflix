@@ -1,0 +1,9 @@
+{
+  "name": "RebaLive RW",
+  "description": "Rwanda's National Multimedia Streaming Platform: Watch, Listen, Read, and Stream Live.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
