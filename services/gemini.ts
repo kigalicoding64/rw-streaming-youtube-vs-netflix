@@ -5,7 +5,8 @@ export class KeroAssistant {
   private ai: GoogleGenAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    // Correct initialization as per coding guidelines
+    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
   async getHelp(query: string, userContext: any) {

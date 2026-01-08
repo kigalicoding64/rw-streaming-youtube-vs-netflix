@@ -1,5 +1,5 @@
 
-import { ContentItem, User, UserRole, LanguageCode, ModerationStatus } from '../types';
+import { ContentItem, User, UserRole, LanguageCode, ModerationStatus, ModerationLog } from '../types';
 
 const STORAGE_KEY = 'rebalive_db';
 
@@ -7,15 +7,18 @@ interface Database {
   users: User[];
   content: ContentItem[];
   currentUser: User | null;
+  moderationLogs: ModerationLog[];
 }
 
 const initialDb: Database = {
   users: [
-    { id: 'admin-1', name: 'System Admin', role: 'admin', credits: 1000000, subscription: 'vip', language: 'en', email: 'admin@rebalive.rw' },
-    { id: 'creator-1', name: 'Bruce Melodie', role: 'creator', credits: 50000, subscription: 'premium', language: 'rw', email: 'bruce@music.rw' }
+    { id: 'admin-1', name: 'System Admin', role: 'admin', credits: 1000000, subscription: 'vip', language: 'en', email: 'admin@rebalive.rw', isSuspended: false },
+    { id: 'creator-1', name: 'Bruce Melodie', role: 'creator', credits: 50000, subscription: 'premium', language: 'rw', email: 'bruce@music.rw', isSuspended: false },
+    { id: 'user-1', name: 'Jean Claude', role: 'user', credits: 1500, subscription: 'basic', language: 'rw', email: 'user@test.com', isSuspended: false }
   ],
-  content: [], // Populated by mock data generators in components
-  currentUser: null
+  content: [],
+  currentUser: null,
+  moderationLogs: []
 };
 
 class ApiService {
@@ -40,10 +43,16 @@ class ApiService {
         credits: 1000,
         subscription: 'none',
         language: 'en',
-        email
+        email,
+        isSuspended: false
       };
       db.users.push(user);
     }
+    
+    if (user.isSuspended) {
+      throw new Error("Your account has been suspended. Please contact support.");
+    }
+
     db.currentUser = user;
     this.saveDb(db);
     return user;
@@ -59,14 +68,34 @@ class ApiService {
     return this.getDb().currentUser;
   }
 
+  // User Management
+  async getAllUsers(): Promise<User[]> {
+    return this.getDb().users;
+  }
+
+  async toggleUserSuspension(userId: string): Promise<User | undefined> {
+    const db = this.getDb();
+    const user = db.users.find(u => u.id === userId);
+    if (user) {
+      user.isSuspended = !user.isSuspended;
+      this.saveDb(db);
+    }
+    return user;
+  }
+
   // Content
+  async getAllContent(): Promise<ContentItem[]> {
+    return this.getDb().content;
+  }
+
   async getContent(type?: string): Promise<ContentItem[]> {
     const db = this.getDb();
     let items = db.content;
     if (type) items = items.filter(i => i.type === type);
-    // Admins see all, others only approved
+    
     const user = db.currentUser;
     if (user?.role === 'admin') return items;
+    
     return items.filter(i => i.status === 'approved');
   }
 
@@ -78,6 +107,8 @@ class ApiService {
       submittedAt: new Date().toISOString(),
       views: 0,
       rating: 0,
+      monetization: 'free',
+      description: '',
       ...item
     } as ContentItem;
     db.content.push(newItem);
@@ -88,12 +119,32 @@ class ApiService {
   async moderateContent(id: string, status: ModerationStatus, notes?: string, warning?: string) {
     const db = this.getDb();
     const item = db.content.find(i => i.id === id);
-    if (item) {
+    const admin = db.currentUser;
+
+    if (item && admin) {
       item.status = status;
       item.moderationNotes = notes;
       item.warning = warning;
+
+      // Add Log
+      const log: ModerationLog = {
+        id: Math.random().toString(36).substr(2, 9),
+        contentId: item.id,
+        contentTitle: item.title,
+        adminId: admin.id,
+        adminName: admin.name,
+        action: warning ? 'warning_added' : status,
+        reason: notes,
+        timestamp: new Date().toISOString()
+      };
+      db.moderationLogs.unshift(log);
+      
       this.saveDb(db);
     }
+  }
+
+  async getModerationLogs(): Promise<ModerationLog[]> {
+    return this.getDb().moderationLogs;
   }
 
   // Payments

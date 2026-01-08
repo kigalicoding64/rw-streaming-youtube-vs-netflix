@@ -14,6 +14,7 @@ export interface User {
   subscription: 'none' | 'basic' | 'premium' | 'vip';
   language: LanguageCode;
   email?: string;
+  isSuspended?: boolean;
 }
 
 export interface ContentItem {
@@ -49,7 +50,9 @@ export interface StudioMetric {
 export interface ModerationLog {
   id: string;
   contentId: string;
+  contentTitle: string;
   adminId: string;
+  adminName: string;
   action: ModerationStatus | 'warning_added';
   reason?: string;
   timestamp: string;
