@@ -23,6 +23,7 @@ export interface ContentTranslation {
   category: string;
   isAiGenerated: boolean;
   verifiedByAdmin: boolean;
+  translationError?: boolean;
 }
 
 export interface ContentItem {

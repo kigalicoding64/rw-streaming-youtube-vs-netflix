@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Play, Info, ChevronRight, Star, TrendingUp, Music, BookOpen, Tv, Globe, Sparkles } from 'lucide-react';
+import { Play, Info, ChevronRight, Star, TrendingUp, Music, BookOpen, Tv, Globe, Sparkles, AlertCircle } from 'lucide-react';
 import { ContentItem, LanguageCode, ContentTranslation } from '../types';
 import { api } from '../services/api';
 import { translator } from '../services/translation';
@@ -98,7 +98,6 @@ const ContentRow = ({ title, items, lang }: { title: string, items: ContentItem[
   </section>
 );
 
-// Fix: Changed component to React.FC to properly handle reserved 'key' prop from parent map iteration
 const ContentCard: React.FC<{ item: ContentItem, lang: LanguageCode }> = ({ item, lang }) => {
   const [translated, setTranslated] = useState<ContentTranslation | null>(null);
 
@@ -116,13 +115,23 @@ const ContentCard: React.FC<{ item: ContentItem, lang: LanguageCode }> = ({ item
             <span className="text-xs font-black uppercase tracking-[0.2em]">{translator.getLabel('watch_now', lang)}</span>
           </div>
         </div>
+        
+        {/* Indicators Overlay */}
+        <div className="absolute top-6 left-6 flex flex-col gap-2">
+          {translated?.isAiGenerated && !translated.translationError && (
+            <div className="bg-blue-600/80 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg uppercase flex items-center gap-1 shadow-lg">
+              <Sparkles size={10} /> {lang} (AI)
+            </div>
+          )}
+          {translated?.translationError && (
+            <div className="bg-yellow-600/90 backdrop-blur-md text-black text-[8px] font-black px-2 py-1 rounded-lg uppercase flex items-center gap-1 shadow-lg border border-black/10">
+              <AlertCircle size={10} /> {lang} Unavailable (Showing {item.originalLanguage.toUpperCase()})
+            </div>
+          )}
+        </div>
+
         {item.monetization === 'premium' && (
           <div className="absolute top-6 right-6 bg-yellow-600 text-black text-[10px] font-black px-3 py-1.5 rounded-xl uppercase shadow-lg">Premium</div>
-        )}
-        {translated?.isAiGenerated && (
-          <div className="absolute top-6 left-6 bg-blue-600/80 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded-lg uppercase flex items-center gap-1">
-            <span className="flex items-center gap-1"><Sparkles size={10} /> {lang} (AI)</span>
-          </div>
         )}
       </div>
       <div className="flex gap-5 px-2">

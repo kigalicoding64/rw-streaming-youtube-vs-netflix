@@ -20,17 +20,32 @@ class TranslationService {
     const cached = api.getTranslation(item.id, targetLang);
     if (cached) return cached;
 
-    // 3. Translate with AI
-    const translated = await kero.translateContent(
-      { title: item.title, description: item.description, category: item.category },
-      targetLang,
-      item.originalLanguage
-    );
+    // 3. Translate with AI with a safety wrapper
+    try {
+      const translated = await kero.translateContent(
+        { title: item.title, description: item.description, category: item.category },
+        targetLang,
+        item.originalLanguage
+      );
 
-    // 4. Save to Cache
-    api.saveTranslation(item.id, targetLang, translated);
-    
-    return translated;
+      // 4. Save to Cache only if it didn't error out
+      if (!translated.translationError) {
+        api.saveTranslation(item.id, targetLang, translated);
+      }
+      
+      return translated;
+    } catch (error) {
+      console.error("TranslationService: Error calling Kero", error);
+      // Return original content but flag as translation failed
+      return {
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        isAiGenerated: false,
+        verifiedByAdmin: false,
+        translationError: true
+      };
+    }
   }
 
   // Common UI labels

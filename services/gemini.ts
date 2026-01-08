@@ -6,7 +6,11 @@ export class KeroAssistant {
   private ai: GoogleGenAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      console.error("API_KEY is missing from environment variables.");
+    }
+    this.ai = new GoogleGenAI({ apiKey: apiKey || '' });
   }
 
   async getHelp(query: string, userContext: any) {
@@ -70,25 +74,32 @@ export class KeroAssistant {
       return {
         ...result,
         isAiGenerated: true,
-        verifiedByAdmin: false
+        verifiedByAdmin: false,
+        translationError: false
       };
     } catch (error) {
       console.error("Translation Error:", error);
       return { 
         ...text, 
         isAiGenerated: false, 
-        verifiedByAdmin: false 
+        verifiedByAdmin: false,
+        translationError: true
       };
     }
   }
 
   async analyzeContentPerformance(metrics: any) {
-    const response = await this.ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `Analyze this content data for a RebaLive creator: ${JSON.stringify(metrics)}. Provide 3 growth strategies.`,
-      config: { thinkingConfig: { thinkingBudget: 2000 } }
-    });
-    return response.text;
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-3-pro-preview',
+        contents: `Analyze this content data for a RebaLive creator: ${JSON.stringify(metrics)}. Provide 3 growth strategies.`,
+        config: { thinkingConfig: { thinkingBudget: 2000 } }
+      });
+      return response.text;
+    } catch (error) {
+      console.error("Performance analysis error:", error);
+      return "Could not analyze performance at this time.";
+    }
   }
 }
 
