@@ -16,6 +16,7 @@ import ReadPage from './pages/Read';
 import LiveTVPage from './pages/LiveTV';
 import CreatorStudio from './pages/CreatorStudio';
 import AdminDashboard from './pages/AdminDashboard';
+import AuthPage from './pages/Auth';
 import KeroAssistant from './components/KeroAssistant';
 
 const LANGUAGES: { code: LanguageCode, name: string, native: string }[] = [
@@ -36,7 +37,6 @@ const App: React.FC = () => {
     localStorage.getItem('rebalive_lang') as LanguageCode
   );
   const [showLangSelect, setShowLangSelect] = useState(!localStorage.getItem('rebalive_lang'));
-  const [showLogin, setShowLogin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -54,16 +54,9 @@ const App: React.FC = () => {
     if (user) api.updateLanguage(user.id, code);
   };
 
-  const handleLogin = async (email: string, role: any) => {
-    try {
-      const newUser = await api.login(email, role);
-      setUser(newUser);
-      setLanguage(newUser.language);
-      localStorage.setItem('rebalive_lang', newUser.language);
-      setShowLogin(false);
-    } catch (e: any) {
-      alert(e.message);
-    }
+  const handleLoginSuccess = (newUser: UserType) => {
+    setUser(newUser);
+    setView('HOME');
   };
 
   const handleLogout = () => {
@@ -80,7 +73,9 @@ const App: React.FC = () => {
   };
 
   const renderView = () => {
+    if (view === 'AUTH') return <AuthPage onLoginSuccess={handleLoginSuccess} onBack={() => setView('HOME')} />;
     if (!language) return null;
+
     switch(view) {
       case 'HOME': return <HomePage setView={setView} currentLang={language} />;
       case 'WATCH': return <WatchPage />;
@@ -99,7 +94,7 @@ const App: React.FC = () => {
         <div className="max-w-4xl w-full space-y-12 py-10">
           <div className="text-center space-y-4">
             <div className="w-24 h-24 bg-red-600 rounded-3xl flex items-center justify-center font-bold italic text-5xl mx-auto shadow-2xl shadow-red-600/40 animate-bounce">R</div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter">REBALIVE <span className="text-red-600">RW</span></h1>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white">REBALIVE <span className="text-red-600">RW</span></h1>
             <div className="space-y-1">
               <p className="text-gray-400 text-lg">Hitamo ururimi ushaka gukoresha</p>
               <p className="text-gray-500">Select your preferred language to continue</p>
@@ -115,7 +110,7 @@ const App: React.FC = () => {
                 <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity">
                    <Globe size={16} className="text-red-600" />
                 </div>
-                <p className="text-2xl font-black group-hover:text-red-600 transition-colors">{lang.native}</p>
+                <p className="text-2xl font-black group-hover:text-red-600 transition-colors text-white">{lang.native}</p>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">{lang.name}</p>
               </button>
             ))}
@@ -125,44 +120,49 @@ const App: React.FC = () => {
     );
   }
 
+  // If in Auth mode, don't show the main layout shell
+  if (view === 'AUTH') {
+    return <AuthPage onLoginSuccess={handleLoginSuccess} onBack={() => setView('HOME')} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans">
       <header className="h-16 border-b border-white/10 bg-black/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 sticky top-0 z-[100]">
         <div className="flex items-center gap-4">
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2">
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-white">
             <Menu size={24} />
           </button>
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('HOME')}>
-            <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center font-bold italic">R</div>
-            <span className="text-xl font-black tracking-tighter hidden sm:block">REBALIVE <span className="text-red-600">RW</span></span>
+            <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center font-bold italic text-white">R</div>
+            <span className="text-xl font-black tracking-tighter hidden sm:block text-white">REBALIVE <span className="text-red-600">RW</span></span>
           </div>
         </div>
 
         <div className="hidden md:flex flex-1 max-w-xl mx-8 items-center bg-white/5 border border-white/10 rounded-full px-4 py-1.5 focus-within:border-red-600 transition-all">
           <Search size={18} className="text-gray-400" />
-          <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none px-3 w-full text-sm" />
+          <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none px-3 w-full text-sm text-white" />
         </div>
 
         <div className="flex items-center gap-3 md:gap-6">
-          <button onClick={() => setShowLangSelect(true)} className="p-2 hover:bg-white/5 rounded-full transition-colors hidden sm:block">
-            <Globe size={18} className="text-gray-400" />
+          <button onClick={() => setShowLangSelect(true)} className="p-2 hover:bg-white/5 rounded-full transition-colors hidden sm:block text-gray-400">
+            <Globe size={18} />
           </button>
           {user ? (
             <>
               <div className="hidden sm:flex items-center gap-2 bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/20">
                 <Wallet size={14} /> {user.credits.toLocaleString()} RWF
               </div>
-              <button onClick={() => setView('PROFILE')} className="w-8 h-8 rounded-full bg-gradient-to-tr from-red-600 to-blue-600 flex items-center justify-center text-xs font-bold cursor-pointer border-2 border-white/20">
+              <button onClick={() => setView('PROFILE')} className="w-8 h-8 rounded-full bg-gradient-to-tr from-red-600 to-blue-600 flex items-center justify-center text-xs font-bold cursor-pointer border-2 border-white/20 text-white">
                 {user.name.charAt(0)}
               </button>
-              <button onClick={handleLogout} className="p-2 hover:text-red-600 transition-colors hidden md:block">
+              <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-red-600 transition-colors hidden md:block">
                 <LogOut size={20} />
               </button>
             </>
           ) : (
             <button 
-              onClick={() => setShowLogin(true)}
-              className="bg-red-600 px-6 py-2 rounded-xl font-bold text-sm shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all"
+              onClick={() => setView('AUTH')}
+              className="bg-red-600 px-6 py-2 rounded-xl font-bold text-sm text-white shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all"
             >
               LOG IN
             </button>
@@ -173,7 +173,7 @@ const App: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         <aside className={`fixed inset-y-0 left-0 z-[110] w-64 bg-black border-r border-white/10 p-4 space-y-1 transform transition-transform lg:relative lg:translate-x-0 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex justify-end lg:hidden mb-4">
-            <button onClick={() => setIsMenuOpen(false)}><X size={24}/></button>
+            <button onClick={() => setIsMenuOpen(false)} className="text-white"><X size={24}/></button>
           </div>
           <NavItem icon={Home} label="Home" active={view === 'HOME'} onClick={() => {setView('HOME'); setIsMenuOpen(false);}} />
           <NavItem icon={PlayCircle} label="Watch" active={view === 'WATCH'} onClick={() => {setView('WATCH'); setIsMenuOpen(false);}} />
@@ -199,33 +199,16 @@ const App: React.FC = () => {
             <div className="mt-auto p-4 bg-gradient-to-br from-red-900/20 to-blue-900/20 rounded-2xl border border-white/5">
               <p className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-tighter">Your Plan</p>
               <p className="text-sm font-black text-white">{user.subscription.toUpperCase()}</p>
-              <button className="mt-3 w-full py-2 bg-red-600 hover:bg-red-700 text-xs font-bold rounded-lg transition-colors">UPGRADE</button>
+              <button className="mt-3 w-full py-2 bg-red-600 hover:bg-red-700 text-xs font-bold rounded-lg transition-colors text-white">UPGRADE</button>
             </div>
           )}
         </aside>
 
-        <main className="flex-1 overflow-y-auto no-scrollbar pb-20 lg:pb-0 relative">
+        <main className="flex-1 overflow-y-auto no-scrollbar pb-20 lg:pb-0 relative bg-black">
           {renderView()}
           <KeroAssistant user={user || { name: 'Guest', language: language || 'en' }} />
         </main>
       </div>
-
-      {showLogin && (
-        <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-zinc-900 w-full max-w-md rounded-[40px] border border-white/10 p-10 space-y-8 animate-in zoom-in-95 duration-200 shadow-2xl">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black">Login to RebaLive</h2>
-              <p className="text-gray-500">Choose your role to continue testing</p>
-            </div>
-            <div className="space-y-4">
-              <LoginRoleBtn label="Regular User" icon={User} onClick={() => handleLogin('user@test.com', 'user')} />
-              <LoginRoleBtn label="Creator Account" icon={LayoutDashboard} onClick={() => handleLogin('creator@test.com', 'creator')} />
-              <LoginRoleBtn label="Admin Access" icon={ShieldAlert} onClick={() => handleLogin('admin@rebalive.rw', 'admin')} />
-            </div>
-            <button onClick={() => setShowLogin(false)} className="w-full text-center text-sm font-bold text-gray-500 hover:text-white transition-colors">Cancel</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -234,18 +217,6 @@ const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button onClick={onClick} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group ${active ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
     <Icon size={20} className={`${active ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
     <span className="text-sm font-medium">{label}</span>
-  </button>
-);
-
-const LoginRoleBtn = ({ label, icon: Icon, onClick }: any) => (
-  <button onClick={onClick} className="w-full flex items-center justify-between p-6 rounded-3xl bg-white/5 border border-white/10 hover:border-red-600 hover:bg-white/10 transition-all group">
-    <div className="flex items-center gap-4">
-      <div className="p-3 rounded-2xl bg-zinc-800 group-hover:bg-red-600 transition-colors">
-        <Icon size={20} />
-      </div>
-      <span className="font-black">{label}</span>
-    </div>
-    <ChevronRight size={20} className="text-gray-500" />
   </button>
 );
 

@@ -43,7 +43,8 @@ export class KeroAssistant {
         description: text.description, 
         category: text.category, 
         isAiGenerated: false, 
-        verifiedByAdmin: true 
+        verifiedByAdmin: true,
+        language: targetLang
       };
     }
 
@@ -70,12 +71,13 @@ export class KeroAssistant {
         }
       });
       
-      const result = JSON.parse(response.text);
+      const result = JSON.parse(response.text || '{}');
       return {
         ...result,
         isAiGenerated: true,
         verifiedByAdmin: false,
-        translationError: false
+        translationError: false,
+        language: targetLang
       };
     } catch (error) {
       console.error("Translation Error:", error);
@@ -83,22 +85,23 @@ export class KeroAssistant {
         ...text, 
         isAiGenerated: false, 
         verifiedByAdmin: false,
-        translationError: true
+        translationError: true,
+        language: targetLang
       };
     }
   }
 
   async analyzeContentPerformance(metrics: any) {
     try {
+      // Switched to gemini-3-flash-preview and removed thinkingBudget to resolve RPC failures
       const response = await this.ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
-        contents: `Analyze this content data for a RebaLive creator: ${JSON.stringify(metrics)}. Provide 3 growth strategies.`,
-        config: { thinkingConfig: { thinkingBudget: 2000 } }
+        model: 'gemini-3-flash-preview',
+        contents: `Analyze this content data for a RebaLive creator: ${JSON.stringify(metrics)}. Provide 3 growth strategies for the Rwandan market.`,
       });
       return response.text;
     } catch (error) {
       console.error("Performance analysis error:", error);
-      return "Could not analyze performance at this time.";
+      return "I'm currently unable to process deep analytics. Try again in a few moments or upload more content to improve my data pool.";
     }
   }
 }

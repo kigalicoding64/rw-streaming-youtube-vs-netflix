@@ -1,9 +1,9 @@
 
-export type AppView = 'HOME' | 'WATCH' | 'LISTEN' | 'READ' | 'LIVE' | 'STUDIO' | 'ADMIN' | 'PROFILE' | 'SEARCH' | 'SUBSCRIPTION';
-export type ContentType = 'movie' | 'series' | 'music' | 'book' | 'audiobook' | 'tv_channel';
-export type MonetizationType = 'free' | 'premium' | 'ppv';
+export type AppView = 'HOME' | 'WATCH' | 'LISTEN' | 'READ' | 'LIVE' | 'STUDIO' | 'ADMIN' | 'PROFILE' | 'SEARCH' | 'SUBSCRIPTION' | 'AUTH';
+export type ContentType = 'movie' | 'series' | 'music' | 'book' | 'audiobook' | 'tv_channel' | 'short' | 'podcast' | 'article';
+export type MonetizationType = 'free' | 'premium' | 'ppv' | 'ads' | 'credits' | 'hybrid';
 export type ModerationStatus = 'pending' | 'approved' | 'rejected' | 'flagged';
-export type UserRole = 'guest' | 'user' | 'creator' | 'admin';
+export type UserRole = 'guest' | 'user' | 'creator' | 'admin' | 'viewer';
 export type LanguageCode = 'en' | 'rw' | 'fr' | 'sw' | 'zh' | 'hi' | 'am' | 'ar';
 
 export interface User {
@@ -24,6 +24,14 @@ export interface ContentTranslation {
   isAiGenerated: boolean;
   verifiedByAdmin: boolean;
   translationError?: boolean;
+  language: LanguageCode;
+}
+
+export interface ProcessingTask {
+  id: string;
+  name: string;
+  status: 'waiting' | 'processing' | 'completed' | 'failed';
+  progress: number;
 }
 
 export interface ContentItem {
@@ -38,11 +46,22 @@ export interface ContentItem {
   category: string;
   price?: number;
   monetization: MonetizationType;
+  monetizationSettings?: {
+    ppvPrice?: number;
+    subscriptionTier?: 'basic' | 'premium' | 'vip';
+    enableAds: boolean;
+    creditsPrice?: number;
+  };
   description: string;
   url?: string;
   timestamp?: string;
   channelAvatar?: string;
   originalLanguage: LanguageCode;
+  translations?: Partial<Record<LanguageCode, ContentTranslation>>;
+  processing?: {
+    overallStatus: 'uploading' | 'ai_processing' | 'ready';
+    tasks: ProcessingTask[];
+  };
   // Moderation fields
   status: ModerationStatus;
   warning?: string;
@@ -55,6 +74,7 @@ export interface StudioMetric {
   value: string;
   change: string;
   trend: 'up' | 'down';
+  subText?: string;
 }
 
 export interface ModerationLog {

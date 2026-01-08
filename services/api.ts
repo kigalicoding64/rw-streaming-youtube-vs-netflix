@@ -31,7 +31,11 @@ const initialDb: Database = {
       rating: 4.8,
       monetization: 'premium',
       status: 'approved',
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      processing: {
+        overallStatus: 'ready',
+        tasks: []
+      }
     }
   ],
   currentUser: null,
@@ -61,35 +65,45 @@ class ApiService {
   }
 
   // Auth
-  async login(email: string, role: UserRole = 'user'): Promise<User> {
+  async login(email: string, password?: string): Promise<User> {
     const db = this.getDb();
     let user = db.users.find(u => u.email === email);
-    const savedLang = localStorage.getItem('rebalive_lang') as LanguageCode;
-
+    
     if (!user) {
-      user = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: email.split('@')[0],
-        role: role,
-        credits: 1000,
-        subscription: 'none',
-        language: savedLang || 'en',
-        email,
-        isSuspended: false
-      };
-      db.users.push(user);
+      throw new Error("User not found. Please sign up.");
     }
     
     if (user.isSuspended) {
       throw new Error("Your account has been suspended. Please contact support.");
     }
 
-    // Sync language from storage to profile
-    if (savedLang) user.language = savedLang;
-
     db.currentUser = user;
     this.saveDb(db);
     return user;
+  }
+
+  async signup(name: string, email: string, role: UserRole): Promise<User> {
+    const db = this.getDb();
+    if (db.users.find(u => u.email === email)) {
+      throw new Error("User already exists with this email.");
+    }
+
+    const savedLang = localStorage.getItem('rebalive_lang') as LanguageCode;
+    const newUser: User = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: name,
+      role: role === 'viewer' ? 'user' : role,
+      credits: 0,
+      subscription: 'none',
+      language: savedLang || 'en',
+      email: email,
+      isSuspended: false
+    };
+
+    db.users.push(newUser);
+    db.currentUser = newUser;
+    this.saveDb(db);
+    return newUser;
   }
 
   logout() {
@@ -132,7 +146,18 @@ class ApiService {
       rating: 0,
       monetization: 'free',
       description: '',
-      originalLanguage: 'en', // Default to English if not specified
+      originalLanguage: 'en',
+      monetizationSettings: {
+        enableAds: true,
+        ppvPrice: 0
+      },
+      processing: {
+        overallStatus: 'ai_processing',
+        tasks: [
+          { id: 't1', name: 'Analysis', status: 'completed', progress: 100 },
+          { id: 't2', name: 'Transcoding', status: 'completed', progress: 100 }
+        ]
+      },
       ...item
     } as ContentItem;
     db.content.push(newItem);

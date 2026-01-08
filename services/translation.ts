@@ -7,12 +7,14 @@ class TranslationService {
   async getTranslatedContent(item: ContentItem, targetLang: LanguageCode): Promise<ContentTranslation> {
     // 1. Check if same language
     if (item.originalLanguage === targetLang) {
+      // Fix: Added missing 'language' property to conform to ContentTranslation interface
       return {
         title: item.title,
         description: item.description,
         category: item.category,
         isAiGenerated: false,
-        verifiedByAdmin: true
+        verifiedByAdmin: true,
+        language: targetLang
       };
     }
 
@@ -37,13 +39,15 @@ class TranslationService {
     } catch (error) {
       console.error("TranslationService: Error calling Kero", error);
       // Return original content but flag as translation failed
+      // Fix: Added missing 'language' property to the error fallback object
       return {
         title: item.title,
         description: item.description,
         category: item.category,
         isAiGenerated: false,
         verifiedByAdmin: false,
-        translationError: true
+        translationError: true,
+        language: targetLang
       };
     }
   }

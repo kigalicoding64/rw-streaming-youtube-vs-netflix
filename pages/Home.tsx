@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Play, Info, ChevronRight, Star, TrendingUp, Music, BookOpen, Tv, Globe, Sparkles, AlertCircle } from 'lucide-react';
+import { Play, Info, ChevronRight, Star, TrendingUp, Music, BookOpen, Tv, Globe, Sparkles, AlertCircle, PlayCircle as PlayCircleIcon } from 'lucide-react';
 import { ContentItem, LanguageCode, ContentTranslation } from '../types';
 import { api } from '../services/api';
 import { translator } from '../services/translation';
+
+const PlayCircle = ({ size, className }: any) => <PlayCircleIcon size={size} className={className} />;
 
 const Home: React.FC<{ setView: any, currentLang: LanguageCode }> = ({ setView, currentLang }) => {
   const [content, setContent] = useState<ContentItem[]>([]);
@@ -152,8 +154,5 @@ const ContentCard: React.FC<{ item: ContentItem, lang: LanguageCode }> = ({ item
     </div>
   );
 };
-
-const PlayCircle = ({ size, className }: any) => <PlayCircleIcon size={size} className={className} />;
-import { PlayCircle as PlayCircleIcon } from 'lucide-react';
 
 export default Home;
