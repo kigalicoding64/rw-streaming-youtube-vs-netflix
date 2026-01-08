@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { ContentItem } from '../../types';
 
-// Fix: Updated mock data to include missing ContentItem properties (status, submittedAt) and use creator instead of channelName
+// Fix: Updated mock data to include missing ContentItem properties (status, submittedAt, originalLanguage) and use creator instead of channelName
 const YOUTUBE_DATA: ContentItem[] = Array.from({ length: 24 }).map((_, i) => ({
   id: `vid-${i}`,
   title: `The Future of AI is Here: Gemini 3 Breakdown ${i + 1}`,
@@ -24,7 +24,8 @@ const YOUTUBE_DATA: ContentItem[] = Array.from({ length: 24 }).map((_, i) => ({
   description: "A deep dive into the latest capabilities of the Gemini 3 multimodal AI models.",
   // Moderation fields required by ContentItem
   status: 'approved',
-  submittedAt: new Date().toISOString()
+  submittedAt: new Date().toISOString(),
+  originalLanguage: 'en'
 }));
 
 const SidebarItem = ({ icon: Icon, label, active = false }: { icon: any, label: string, active?: boolean }) => (

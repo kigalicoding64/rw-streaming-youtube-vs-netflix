@@ -1,11 +1,11 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { LanguageCode, ContentTranslation } from "../types";
 
 export class KeroAssistant {
   private ai: GoogleGenAI;
 
   constructor() {
-    // Correct initialization as per coding guidelines
     this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
@@ -25,6 +25,60 @@ export class KeroAssistant {
     } catch (error) {
       console.error("Kero Assistant Error:", error);
       return "Muraho! I'm having trouble connecting right now. Please try again later.";
+    }
+  }
+
+  async translateContent(
+    text: { title: string; description: string; category: string },
+    targetLang: LanguageCode,
+    originalLang: LanguageCode
+  ): Promise<ContentTranslation> {
+    if (targetLang === originalLang) {
+      return { 
+        title: text.title, 
+        description: text.description, 
+        category: text.category, 
+        isAiGenerated: false, 
+        verifiedByAdmin: true 
+      };
+    }
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Translate the following media metadata from ${originalLang} to ${targetLang}. 
+        Return the result as a raw JSON object.
+        Title: ${text.title}
+        Description: ${text.description}
+        Category: ${text.category}`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              category: { type: Type.STRING }
+            },
+            required: ["title", "description", "category"]
+          },
+          systemInstruction: "You are a professional multilingual translator for RebaLive RW, a streaming service in Rwanda. Ensure cultural nuances are preserved, especially for Kinyarwanda (rw) and Swahili (sw). Return only the JSON object."
+        }
+      });
+      
+      const result = JSON.parse(response.text);
+      return {
+        ...result,
+        isAiGenerated: true,
+        verifiedByAdmin: false
+      };
+    } catch (error) {
+      console.error("Translation Error:", error);
+      return { 
+        ...text, 
+        isAiGenerated: false, 
+        verifiedByAdmin: false 
+      };
     }
   }
 

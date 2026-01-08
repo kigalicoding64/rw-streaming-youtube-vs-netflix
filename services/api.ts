@@ -1,7 +1,8 @@
 
-import { ContentItem, User, UserRole, LanguageCode, ModerationStatus, ModerationLog } from '../types';
+import { ContentItem, User, UserRole, LanguageCode, ModerationStatus, ModerationLog, ContentTranslation } from '../types';
 
 const STORAGE_KEY = 'rebalive_db';
+const TRANSLATION_KEY = 'rebalive_translations';
 
 interface Database {
   users: User[];
@@ -16,7 +17,23 @@ const initialDb: Database = {
     { id: 'creator-1', name: 'Bruce Melodie', role: 'creator', credits: 50000, subscription: 'premium', language: 'rw', email: 'bruce@music.rw', isSuspended: false },
     { id: 'user-1', name: 'Jean Claude', role: 'user', credits: 1500, subscription: 'basic', language: 'rw', email: 'user@test.com', isSuspended: false }
   ],
-  content: [],
+  content: [
+    {
+      id: 'm-1',
+      type: 'movie',
+      title: 'The Unseen Hero',
+      description: 'A powerful story about selflessness in a changing nation.',
+      category: 'Trending',
+      creator: 'Rwanda Films Ltd',
+      originalLanguage: 'en',
+      thumbnail: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&q=80&w=1000',
+      views: 450000,
+      rating: 4.8,
+      monetization: 'premium',
+      status: 'approved',
+      submittedAt: new Date().toISOString()
+    }
+  ],
   currentUser: null,
   moderationLogs: []
 };
@@ -31,10 +48,24 @@ class ApiService {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   }
 
+  // Translation Persistence
+  getTranslation(contentId: string, lang: LanguageCode): ContentTranslation | null {
+    const translations = JSON.parse(localStorage.getItem(TRANSLATION_KEY) || '{}');
+    return translations[`${contentId}_${lang}`] || null;
+  }
+
+  saveTranslation(contentId: string, lang: LanguageCode, data: ContentTranslation) {
+    const translations = JSON.parse(localStorage.getItem(TRANSLATION_KEY) || '{}');
+    translations[`${contentId}_${lang}`] = data;
+    localStorage.setItem(TRANSLATION_KEY, JSON.stringify(translations));
+  }
+
   // Auth
   async login(email: string, role: UserRole = 'user'): Promise<User> {
     const db = this.getDb();
     let user = db.users.find(u => u.email === email);
+    const savedLang = localStorage.getItem('rebalive_lang') as LanguageCode;
+
     if (!user) {
       user = {
         id: Math.random().toString(36).substr(2, 9),
@@ -42,7 +73,7 @@ class ApiService {
         role: role,
         credits: 1000,
         subscription: 'none',
-        language: 'en',
+        language: savedLang || 'en',
         email,
         isSuspended: false
       };
@@ -52,6 +83,9 @@ class ApiService {
     if (user.isSuspended) {
       throw new Error("Your account has been suspended. Please contact support.");
     }
+
+    // Sync language from storage to profile
+    if (savedLang) user.language = savedLang;
 
     db.currentUser = user;
     this.saveDb(db);
@@ -88,17 +122,6 @@ class ApiService {
     return this.getDb().content;
   }
 
-  async getContent(type?: string): Promise<ContentItem[]> {
-    const db = this.getDb();
-    let items = db.content;
-    if (type) items = items.filter(i => i.type === type);
-    
-    const user = db.currentUser;
-    if (user?.role === 'admin') return items;
-    
-    return items.filter(i => i.status === 'approved');
-  }
-
   async uploadContent(item: Partial<ContentItem>): Promise<ContentItem> {
     const db = this.getDb();
     const newItem: ContentItem = {
@@ -109,6 +132,7 @@ class ApiService {
       rating: 0,
       monetization: 'free',
       description: '',
+      originalLanguage: 'en', // Default to English if not specified
       ...item
     } as ContentItem;
     db.content.push(newItem);
@@ -126,7 +150,6 @@ class ApiService {
       item.moderationNotes = notes;
       item.warning = warning;
 
-      // Add Log
       const log: ModerationLog = {
         id: Math.random().toString(36).substr(2, 9),
         contentId: item.id,
@@ -138,26 +161,12 @@ class ApiService {
         timestamp: new Date().toISOString()
       };
       db.moderationLogs.unshift(log);
-      
       this.saveDb(db);
     }
   }
 
   async getModerationLogs(): Promise<ModerationLog[]> {
     return this.getDb().moderationLogs;
-  }
-
-  // Payments
-  async purchaseContent(userId: string, contentId: string): Promise<boolean> {
-    const db = this.getDb();
-    const user = db.users.find(u => u.id === userId);
-    const content = db.content.find(c => c.id === contentId);
-    if (user && content && content.price && user.credits >= content.price) {
-      user.credits -= content.price;
-      this.saveDb(db);
-      return true;
-    }
-    return false;
   }
 
   async updateLanguage(userId: string, lang: LanguageCode) {

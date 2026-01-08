@@ -1,0 +1,64 @@
+
+import { LanguageCode, ContentItem, ContentTranslation } from '../types';
+import { api } from './api';
+import { kero } from './gemini';
+
+class TranslationService {
+  async getTranslatedContent(item: ContentItem, targetLang: LanguageCode): Promise<ContentTranslation> {
+    // 1. Check if same language
+    if (item.originalLanguage === targetLang) {
+      return {
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        isAiGenerated: false,
+        verifiedByAdmin: true
+      };
+    }
+
+    // 2. Check Cache
+    const cached = api.getTranslation(item.id, targetLang);
+    if (cached) return cached;
+
+    // 3. Translate with AI
+    const translated = await kero.translateContent(
+      { title: item.title, description: item.description, category: item.category },
+      targetLang,
+      item.originalLanguage
+    );
+
+    // 4. Save to Cache
+    api.saveTranslation(item.id, targetLang, translated);
+    
+    return translated;
+  }
+
+  // Common UI labels
+  getLabel(key: string, lang: LanguageCode): string {
+    const labels: Record<string, Record<LanguageCode, string>> = {
+      'watch_now': {
+        'rw': 'Kureba ubu',
+        'en': 'Watch Now',
+        'fr': 'Regarder maintenant',
+        'sw': 'Tazama sasa',
+        'zh': '立即观看',
+        'hi': 'अभी देखें',
+        'am': 'አሁን ይመልከቱ',
+        'ar': 'شاهد الآن'
+      },
+      'trending': {
+        'rw': 'Ibikunzwe ubu',
+        'en': 'Trending Now',
+        'fr': 'Tendances',
+        'sw': 'Inayovuma',
+        'zh': '热门',
+        'hi': 'प्रचलित',
+        'am': 'በመታየት ላይ ያለ',
+        'ar': 'رائج'
+      }
+    };
+    return labels[key]?.[lang] || labels[key]?.['en'] || key;
+  }
+}
+
+export const translator = new TranslationService();

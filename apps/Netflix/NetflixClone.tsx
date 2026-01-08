@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Bell, User, Play, Info, ChevronRight, ChevronLeft } from 'lucide-react';
 import { ContentItem } from '../../types';
 
-// Fix: Added missing required properties (status, submittedAt) to match ContentItem interface
+// Fix: Added missing required properties (status, submittedAt, originalLanguage) to match ContentItem interface
 const NETFLIX_DATA: ContentItem[] = Array.from({ length: 30 }).map((_, i) => ({
   id: `movie-${i}`,
   title: i === 0 ? "Stranger Things" : `Original Title ${i}`,
@@ -17,7 +17,8 @@ const NETFLIX_DATA: ContentItem[] = Array.from({ length: 30 }).map((_, i) => ({
   monetization: 'premium',
   // Moderation fields required by ContentItem
   status: 'approved',
-  submittedAt: new Date().toISOString()
+  submittedAt: new Date().toISOString(),
+  originalLanguage: 'en'
 }));
 
 const NetflixClone: React.FC = () => {

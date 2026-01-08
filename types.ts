@@ -17,6 +17,14 @@ export interface User {
   isSuspended?: boolean;
 }
 
+export interface ContentTranslation {
+  title: string;
+  description: string;
+  category: string;
+  isAiGenerated: boolean;
+  verifiedByAdmin: boolean;
+}
+
 export interface ContentItem {
   id: string;
   type: ContentType;
@@ -33,6 +41,7 @@ export interface ContentItem {
   url?: string;
   timestamp?: string;
   channelAvatar?: string;
+  originalLanguage: LanguageCode;
   // Moderation fields
   status: ModerationStatus;
   warning?: string;

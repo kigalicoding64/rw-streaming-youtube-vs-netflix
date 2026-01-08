@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Home, PlayCircle, Music, BookOpen, Tv, Search, User, 
-  LayoutDashboard, ShieldAlert, MessageCircle, Wallet,
-  Menu, X, Bell, Globe, LogOut, CheckCircle2, ChevronRight
+  LayoutDashboard, ShieldAlert, Wallet,
+  Menu, X, LogOut, ChevronRight, Globe
 } from 'lucide-react';
 import { AppView, User as UserType, LanguageCode } from './types';
 import { api } from './services/api';
@@ -25,23 +25,27 @@ const LANGUAGES: { code: LanguageCode, name: string, native: string }[] = [
   { code: 'sw', name: 'Kiswahili', native: 'Kiswahili' },
   { code: 'zh', name: 'Chinese', native: '中文' },
   { code: 'hi', name: 'Hindi', native: 'हिन्दी' },
-  { code: 'am', name: 'Ethiopian', native: 'አማርኛ' },
+  { code: 'am', name: 'Amharic', native: 'አማርኛ' },
   { code: 'ar', name: 'Arabic', native: 'العربية' }
 ];
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('HOME');
   const [user, setUser] = useState<UserType | null>(api.getCurrentUser());
-  const [language, setLanguage] = useState<LanguageCode | null>(null);
+  const [language, setLanguage] = useState<LanguageCode | null>(
+    localStorage.getItem('rebalive_lang') as LanguageCode
+  );
   const [showLangSelect, setShowLangSelect] = useState(!localStorage.getItem('rebalive_lang'));
   const [showLogin, setShowLogin] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Initialize lang from storage
   useEffect(() => {
-    const storedLang = localStorage.getItem('rebalive_lang') as LanguageCode;
-    if (storedLang) setLanguage(storedLang);
-  }, []);
+    // If user is logged in, sync their profile language with storage
+    if (user && user.language !== language) {
+      setLanguage(user.language);
+      localStorage.setItem('rebalive_lang', user.language);
+    }
+  }, [user]);
 
   const handleLanguageSelect = (code: LanguageCode) => {
     setLanguage(code);
@@ -51,9 +55,15 @@ const App: React.FC = () => {
   };
 
   const handleLogin = async (email: string, role: any) => {
-    const newUser = await api.login(email, role);
-    setUser(newUser);
-    setShowLogin(false);
+    try {
+      const newUser = await api.login(email, role);
+      setUser(newUser);
+      setLanguage(newUser.language);
+      localStorage.setItem('rebalive_lang', newUser.language);
+      setShowLogin(false);
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
   const handleLogout = () => {
@@ -62,7 +72,6 @@ const App: React.FC = () => {
     setView('HOME');
   };
 
-  // Permission Guard
   const canAccess = (requiredRole: string): boolean => {
     if (!user) return false;
     if (user.role === 'admin') return true;
@@ -71,37 +80,43 @@ const App: React.FC = () => {
   };
 
   const renderView = () => {
+    if (!language) return null;
     switch(view) {
-      case 'HOME': return <HomePage setView={setView} />;
+      case 'HOME': return <HomePage setView={setView} currentLang={language} />;
       case 'WATCH': return <WatchPage />;
       case 'LISTEN': return <ListenPage />;
       case 'READ': return <ReadPage />;
       case 'LIVE': return <LiveTVPage />;
       case 'STUDIO': return canAccess('creator') ? <CreatorStudio /> : <div className="p-20 text-center">Unauthorized Access</div>;
       case 'ADMIN': return canAccess('admin') ? <AdminDashboard /> : <div className="p-20 text-center">Unauthorized Access</div>;
-      default: return <HomePage setView={setView} />;
+      default: return <HomePage setView={setView} currentLang={language} />;
     }
   };
 
-  // 1. Language Selection Overlay
   if (showLangSelect) {
     return (
-      <div className="fixed inset-0 z-[2000] bg-black flex items-center justify-center p-6 overflow-y-auto">
+      <div className="fixed inset-0 z-[2000] bg-black flex flex-col items-center justify-center p-6 overflow-y-auto">
         <div className="max-w-4xl w-full space-y-12 py-10">
           <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-red-600 rounded-2xl flex items-center justify-center font-bold italic text-4xl mx-auto shadow-2xl shadow-red-600/20">R</div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter">REBALIVE <span className="text-red-600">RW</span></h1>
-            <p className="text-gray-400 text-lg">Hitamo ururimi ushaka gukoresha / Select your language</p>
+            <div className="w-24 h-24 bg-red-600 rounded-3xl flex items-center justify-center font-bold italic text-5xl mx-auto shadow-2xl shadow-red-600/40 animate-bounce">R</div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter">REBALIVE <span className="text-red-600">RW</span></h1>
+            <div className="space-y-1">
+              <p className="text-gray-400 text-lg">Hitamo ururimi ushaka gukoresha</p>
+              <p className="text-gray-500">Select your preferred language to continue</p>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {LANGUAGES.map(lang => (
               <button 
                 key={lang.code}
                 onClick={() => handleLanguageSelect(lang.code)}
-                className="group p-6 rounded-3xl bg-white/5 border border-white/10 hover:border-red-600 hover:bg-white/10 transition-all text-center space-y-2"
+                className="group p-8 rounded-[40px] bg-white/5 border border-white/10 hover:border-red-600 hover:bg-white/10 transition-all text-center space-y-3 relative overflow-hidden"
               >
-                <p className="text-xl font-black group-hover:text-red-600 transition-colors">{lang.native}</p>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{lang.name}</p>
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity">
+                   <Globe size={16} className="text-red-600" />
+                </div>
+                <p className="text-2xl font-black group-hover:text-red-600 transition-colors">{lang.native}</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">{lang.name}</p>
               </button>
             ))}
           </div>
@@ -112,7 +127,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col font-sans">
-      {/* Top Header */}
       <header className="h-16 border-b border-white/10 bg-black/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 sticky top-0 z-[100]">
         <div className="flex items-center gap-4">
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2">
@@ -126,10 +140,13 @@ const App: React.FC = () => {
 
         <div className="hidden md:flex flex-1 max-w-xl mx-8 items-center bg-white/5 border border-white/10 rounded-full px-4 py-1.5 focus-within:border-red-600 transition-all">
           <Search size={18} className="text-gray-400" />
-          <input type="text" placeholder="Search movies, music, books..." className="bg-transparent border-none outline-none px-3 w-full text-sm" />
+          <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none px-3 w-full text-sm" />
         </div>
 
         <div className="flex items-center gap-3 md:gap-6">
+          <button onClick={() => setShowLangSelect(true)} className="p-2 hover:bg-white/5 rounded-full transition-colors hidden sm:block">
+            <Globe size={18} className="text-gray-400" />
+          </button>
           {user ? (
             <>
               <div className="hidden sm:flex items-center gap-2 bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/20">
@@ -154,16 +171,15 @@ const App: React.FC = () => {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
         <aside className={`fixed inset-y-0 left-0 z-[110] w-64 bg-black border-r border-white/10 p-4 space-y-1 transform transition-transform lg:relative lg:translate-x-0 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex justify-end lg:hidden mb-4">
             <button onClick={() => setIsMenuOpen(false)}><X size={24}/></button>
           </div>
-          <NavItem icon={Home} label="Nyumbani" active={view === 'HOME'} onClick={() => {setView('HOME'); setIsMenuOpen(false);}} />
-          <NavItem icon={PlayCircle} label="Filime" active={view === 'WATCH'} onClick={() => {setView('WATCH'); setIsMenuOpen(false);}} />
-          <NavItem icon={Music} label="Umiziki" active={view === 'LISTEN'} onClick={() => {setView('LISTEN'); setIsMenuOpen(false);}} />
-          <NavItem icon={BookOpen} label="Gusoma" active={view === 'READ'} onClick={() => {setView('READ'); setIsMenuOpen(false);}} />
-          <NavItem icon={Tv} label="TV Live" active={view === 'LIVE'} onClick={() => {setView('LIVE'); setIsMenuOpen(false);}} />
+          <NavItem icon={Home} label="Home" active={view === 'HOME'} onClick={() => {setView('HOME'); setIsMenuOpen(false);}} />
+          <NavItem icon={PlayCircle} label="Watch" active={view === 'WATCH'} onClick={() => {setView('WATCH'); setIsMenuOpen(false);}} />
+          <NavItem icon={Music} label="Listen" active={view === 'LISTEN'} onClick={() => {setView('LISTEN'); setIsMenuOpen(false);}} />
+          <NavItem icon={BookOpen} label="Read" active={view === 'READ'} onClick={() => {setView('READ'); setIsMenuOpen(false);}} />
+          <NavItem icon={Tv} label="Live TV" active={view === 'LIVE'} onClick={() => {setView('LIVE'); setIsMenuOpen(false);}} />
           
           <div className="pt-8 pb-2 px-4 text-[10px] uppercase tracking-widest text-gray-500 font-bold">Personal</div>
           <NavItem icon={User} label="Profile" active={view === 'PROFILE'} onClick={() => {setView('PROFILE'); setIsMenuOpen(false);}} />
@@ -188,14 +204,12 @@ const App: React.FC = () => {
           )}
         </aside>
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto no-scrollbar pb-20 lg:pb-0 relative">
           {renderView()}
-          <KeroAssistant user={user || { name: 'Guest' }} />
+          <KeroAssistant user={user || { name: 'Guest', language: language || 'en' }} />
         </main>
       </div>
 
-      {/* Login Modal */}
       {showLogin && (
         <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-zinc-900 w-full max-w-md rounded-[40px] border border-white/10 p-10 space-y-8 animate-in zoom-in-95 duration-200 shadow-2xl">
